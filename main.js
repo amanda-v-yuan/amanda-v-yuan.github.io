@@ -1,43 +1,52 @@
-import { INGREDIENTS } from './data/ingredients.js';
-import { RECIPES } from './data/recipes.js';
-import { loadState, saveState } from './logic/persistence.js';
-import * as inventory from './logic/inventory.js';
-import * as boxes from './logic/boxes.js';
-import * as crafting from './logic/crafting.js';
-import * as marketplace from './logic/marketplace.js';
-import * as leveling from './logic/leveling.js';
-import * as render from './logic/render.js';
+// main.js
+import { INGREDIENTS, RECIPES, BOX_WEIGHTS, PREMIUM_WEIGHTS, BOX_COST, PREMIUM_COST, ING_MAP } from './ingredients.js';
+import { craftRecipe, sellAll, tradeOne } from './recipes.js';
+import { openFreeBox, openPaidBox, openPremiumBox, startCooldown } from './boxes.js';
+import { renderAll, el } from './render.js';
 
-// default state
-let state = {
-  points:0, inventory:{}, opened:0, log:[], freeBoxes:10, cooldownActive:false, cooldownEndsAt:0, level:1
-};
-state = loadState(state);
+// DOMContentLoaded ensures HTML is fully loaded before JS runs
+document.addEventListener('DOMContentLoaded', () => {
+  // Initial render
+  renderAll();
 
-function pushLog(text){ state.log.unshift(`${new Date().toLocaleTimeString()} · ${text}`); if(state.log.length>400) state.log.pop(); saveState(state); }
-function addPoints(n, reason){ state.points+=n; if(reason) pushLog(`+${n} pts — ${reason}`); leveling.checkLevelUp(state,pushLog,renderAll); saveState(state); }
-function el(id){ return document.getElementById(id); }
+  // --- Button event listeners ---
+  el('openBoxBtn').addEventListener('click', () => openFreeBox());
+  el('openPaidBtn').addEventListener('click', () => openPaidBox());
+  el('openPremiumBtn').addEventListener('click', () => openPremiumBox());
+  el('buyBoxBtn').addEventListener('click', () => openPaidBox());
+  el('freeBoxBtn').addEventListener('click', () => openFreeBox());
+  el('sellAllBtn').addEventListener('click', () => sellAll());
+  el('resetBtn').addEventListener('click', () => {
+    if (confirm('Reset all progress?')) {
+      localStorage.clear();
+      location.reload();
+    }
+  });
 
-function renderAll(){
-  render.renderInventory(state, el);
-  render.renderPoints(state, el, boxes.BOX_COST, inventory.inventoryCap, leveling.nextLevelPoints);
-  render.renderLog(state, el);
-}
+  el('tradeBtn').addEventListener('click', () => {
+    const give = el('tradeGive').value;
+    const rar = el('tradeRarity').value;
+    if (!give) {
+      alert('No ingredient selected to trade');
+      return;
+    }
+    tradeOne(give, rar);
+  });
 
-renderAll();
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'o') openFreeBox();
+    if (e.key.toLowerCase() === 'p') openPremiumBox();
+  });
 
-// Buttons
-el('openBoxBtn').addEventListener('click',()=>boxes.openFreeBox(state,pushLog,renderAll,boxes.startCooldown));
-el('openPaidBtn').addEventListener('click',()=>boxes.openPaidBox(state,pushLog,renderAll));
-el('openPremiumBtn').addEventListener('click',()=>boxes.openPremiumBox(state,pushLog,renderAll));
-el('buyBoxBtn').addEventListener('click',()=>boxes.openPaidBox(state,pushLog,renderAll));
-el('freeBoxBtn').addEventListener('click',()=>boxes.openFreeBox(state,pushLog,renderAll,boxes.startCooldown));
-el('sellAllBtn').addEventListener('click',()=>crafting.sellAll(state, addPoints, pushLog, renderAll));
-el('resetBtn').addEventListener('click',()=>{ if(confirm('Reset all?')) { state={points:0,inventory:{},opened:0,log:[],freeBoxes:10,cooldownActive:false,cooldownEndsAt:0,level:1}; saveState(state); renderAll(); } });
+  // First-run welcome
+  if (!localStorage.getItem('vibeboxes_save_v2')) {
+    alert('Welcome! You start with 10 free boxes. After they run out, wait 5s to regenerate 1 free box.');
+  }
 
-el('tradeBtn').addEventListener('click',()=>{
-  const give = el('tradeGive').value;
-  const rar = el('tradeRarity').value;
-  if(!give){ pushLog('No ingredient selected'); renderAll(); return; }
-  marketplace.tradeOne(state,give,rar,pushLog,renderAll);
+  // Resume cooldown if active
+  const saved = JSON.parse(localStorage.getItem('vibeboxes_save_v2') || '{}');
+  if (saved.cooldownActive && saved.cooldownEndsAt > Date.now()) {
+    startCooldown();
+  }
 });
