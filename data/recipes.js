@@ -1,7 +1,14 @@
-export const RECIPES = [
-  {id:'salad', name:'Fresh Salad', requires:{lettuce:1,tomato:1}, points:40},
-  {id:'omelette', name:'Omelette', requires:{egg:2,cheese:1}, points:80},
-  {id:'truffle_pasta', name:'Truffle Pasta', requires:{flour:1,garlic:1,truffle:1}, points:180},
-  {id:'saffron_risotto', name:'Saffron Risotto', requires:{rice:1,saffron:1}, points:220},
-  {id:'gold_dessert', name:'Gold Dessert', requires:{flour:1,egg:1,goldleaf:1}, points:400}
-];
+// recipes.js
+import { state, tryAddIngredient, addPoints, pushLog } from './boxes.js';
+import { ING_MAP, RECIPES } from './ingredients.js';
+import { renderAll } from './render.js';
+
+export function craftRecipe(recipeId){
+  const recipe = RECIPES.find(r=>r.id===recipeId);
+  if(!recipe) return;
+  const missing = [];
+  for(const [rid,c] of Object.entries(recipe.requires)){
+    if((state.inventory[rid]||0)<c) missing.push(`${ING_MAP[rid]?.name || rid} x${c-(state.inventory[rid]||0)}`);
+  }
+  if(missing.length){ pushLog('Missing ingredients: '+missing.join(', ')); renderAll(); return; }
+ 
