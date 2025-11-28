@@ -1,4 +1,4 @@
-import { ING_MAP } from '../data/ingredients.js';
+import { ING_MAP } from './data/ingredients.js';
 
 export function inventoryTotal(state){
   return Object.values(state.inventory).reduce((a,b)=>a+(b||0),0);
