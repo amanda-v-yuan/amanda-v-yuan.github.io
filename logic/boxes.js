@@ -1,6 +1,6 @@
 // boxes.js
-import { INGREDIENTS, ING_MAP, BOX_WEIGHTS, PREMIUM_WEIGHTS, BOX_COST, PREMIUM_COST } from './ingredients.js';
-import { renderAll, updateCooldownVisual, el } from './render.js';
+import { INGREDIENTS, ING_MAP, BOX_WEIGHTS, PREMIUM_WEIGHTS, BOX_COST, PREMIUM_COST } from './data/ingredients.js';
+import { renderAll, updateCooldownVisual, el } from './logic/render.js';
 
 export let state = {
   points:0, inventory:{}, opened:0, log:[],
