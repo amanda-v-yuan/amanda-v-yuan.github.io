@@ -5,70 +5,66 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ingredient Box Game</title>
 <style>
-  :root {
-    --bg: #071022;
-    --card-bg: #0f1a33;
-    --text: #f0f0f0;
-    --accent: #ffcc00;
-    --button: #1a2a50;
-  }
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 1rem;
-  }
-  h1 {
-    text-align: center;
-  }
-  .inventory, .recipes, .actions, .trade {
-    margin: 1rem 0;
-    width: 100%;
-    max-width: 500px;
-  }
-  .inventory div, .recipes div, .trade div {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.3rem 0.5rem;
-    background: var(--card-bg);
-    margin: 0.2rem 0;
-    border-radius: 6px;
-  }
-  button {
-    background: var(--button);
-    border: none;
-    color: var(--text);
-    padding: 0.5rem 1rem;
-    margin: 0.2rem;
-    border-radius: 6px;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-  button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .log {
-    max-height: 150px;
-    overflow-y: auto;
-    width: 100%;
-    background: var(--card-bg);
-    padding: 0.5rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-  }
+:root {
+  --bg:#071022;
+  --card-bg:#0f1a33;
+  --text:#f0f0f0;
+  --accent:#ffcc00;
+  --button:#1a2a50;
+}
+body {
+  margin:0;
+  font-family:sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:1rem;
+}
+h1 { text-align:center; }
+.stats, .inventory, .recipes, .actions, .trade { margin:1rem 0; width:100%; max-width:500px; }
+.inventory div, .recipes div, .trade div {
+  display:flex;
+  justify-content:space-between;
+  padding:0.3rem 0.5rem;
+  background:var(--card-bg);
+  margin:0.2rem 0;
+  border-radius:6px;
+}
+button {
+  background:var(--button);
+  border:none;
+  color:var(--text);
+  padding:0.5rem 1rem;
+  margin:0.2rem;
+  border-radius:6px;
+  font-size:1rem;
+  cursor:pointer;
+}
+button:disabled { opacity:0.4; cursor:not-allowed; }
+.log { max-height:150px; overflow-y:auto; width:100%; background:var(--card-bg); padding:0.5rem; border-radius:6px; font-size:0.9rem; }
+.popup {
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:var(--card-bg);
+  padding:1rem 2rem;
+  border-radius:10px;
+  font-size:1.2rem;
+  text-align:center;
+  display:none;
+  z-index:100;
+}
 </style>
 </head>
 <body>
 <h1>Ingredient Box Game</h1>
-<div class="stats">Points: <span id="points">0</span></div>
+<div class="stats">Points: <span id="points">0</span> | Free Boxes: <span id="freeBoxes">3</span></div>
 
 <div class="actions">
-  <button id="buyBox">Buy Box (10 pts)</button>
+  <button id="buyBox">Buy Premium Box (10 pts)</button>
   <button id="openBox">Open Box</button>
 </div>
 
@@ -88,39 +84,47 @@
 </div>
 
 <div class="log" id="log"></div>
+<div class="popup" id="popup"></div>
 
 <script>
 // Game state
 const state = {
-  points: 0,
-  boxes: 0,
-  inventory: {},
-  inventoryLimit: 20,
-  boxContents: [],
+  points:0,
+  inventory:{},
+  inventoryLimit:30,
+  boxContents:[],
+  freeBoxes:3,
+  lastFreeBox:Date.now(),
 };
 
-// Ingredients and rarity
+// Ingredients
 const INGREDIENTS = [
-  {name: "Flour", rarity: "common"},
-  {name: "Egg", rarity: "common"},
-  {name: "Milk", rarity: "common"},
-  {name: "Sugar", rarity: "common"},
-  {name: "Cheese", rarity: "rare"},
-  {name: "Butter", rarity: "rare"},
-  {name: "Chocolate", rarity: "epic"},
-  {name: "Vanilla", rarity: "epic"},
+  {name:"Flour", rarity:"common"},
+  {name:"Egg", rarity:"common"},
+  {name:"Milk", rarity:"common"},
+  {name:"Sugar", rarity:"common"},
+  {name:"Cheese", rarity:"rare"},
+  {name:"Butter", rarity:"rare"},
+  {name:"Chocolate", rarity:"epic"},
+  {name:"Vanilla", rarity:"epic"},
+  {name:"Strawberry", rarity:"rare"},
+  {name:"Honey", rarity:"epic"},
+  {name:"Blueberry", rarity:"epic"},
 ];
 
+// Recipes
 const RECIPES = [
-  {name: "Cake", ingredients: ["Flour","Egg","Sugar"], points: 15},
-  {name: "Cheese Omelette", ingredients: ["Egg","Cheese","Milk"], points: 20},
-  {name: "Chocolate Milk", ingredients: ["Milk","Chocolate"], points: 25},
+  {name:"Cake", ingredients:["Flour","Egg","Sugar"], points:15},
+  {name:"Cheese Omelette", ingredients:["Egg","Cheese","Milk"], points:20},
+  {name:"Chocolate Milk", ingredients:["Milk","Chocolate"], points:25},
+  {name:"Berry Tart", ingredients:["Flour","Butter","Strawberry"], points:30},
+  {name:"Honey Chocolate", ingredients:["Chocolate","Honey"], points:40},
 ];
 
-// Trading rules: trade 5 commons -> 1 rare
+// Trading rules
 const TRADE_RULES = [
-  {give: "common", amount: 5, receive: "rare"},
-  {give: "rare", amount: 3, receive: "epic"},
+  {give:"common", amount:5, receive:"rare"},
+  {give:"rare", amount:3, receive:"epic"},
 ];
 
 // Logging
@@ -129,18 +133,24 @@ function pushLog(msg){
   log.innerHTML = msg + "<br>" + log.innerHTML;
 }
 
-// Helpers
-function getRarity(ingredient) {
-  return INGREDIENTS.find(i => i.name === ingredient).rarity;
+// Popup
+function showPopup(msg){
+  const p = document.getElementById("popup");
+  p.textContent = msg;
+  p.style.display = "block";
+  setTimeout(()=>{p.style.display="none";},1200);
 }
 
-function addIngredient(name, qty=1){
+// Helpers
+function getRarity(ingredient){ return INGREDIENTS.find(i=>i.name===ingredient).rarity; }
+function addIngredient(name,qty=1){
   const total = Object.values(state.inventory).reduce((a,b)=>a+b,0);
   if(total + qty > state.inventoryLimit){
     pushLog("Inventory full! Cannot add " + name);
+    showPopup("Inventory Full!");
     return false;
   }
-  state.inventory[name] = (state.inventory[name]||0) + qty;
+  state.inventory[name]=(state.inventory[name]||0)+qty;
   renderInventory();
   return true;
 }
@@ -148,8 +158,10 @@ function addIngredient(name, qty=1){
 // Render functions
 function renderInventory(){
   const container = document.getElementById("inventoryList");
-  container.innerHTML = "";
-  for(const [ing, qty] of Object.entries(state.inventory)){
+  container.innerHTML="";
+  const total = Object.values(state.inventory).reduce((a,b)=>a+b,0);
+  if(total >= state.inventoryLimit*0.8) showPopup("Inventory almost full!");
+  for(const [ing,qty] of Object.entries(state.inventory)){
     const div = document.createElement("div");
     div.textContent = `${ing} x${qty}`;
     container.appendChild(div);
@@ -158,21 +170,22 @@ function renderInventory(){
 
 function renderRecipes(){
   const container = document.getElementById("recipeList");
-  container.innerHTML = "";
+  container.innerHTML="";
   RECIPES.forEach(r=>{
-    const div = document.createElement("div");
-    div.textContent = `${r.name} (${r.points} pts)`;
-    const btn = document.createElement("button");
-    btn.textContent = "Craft";
-    btn.disabled = !r.ingredients.every(i => (state.inventory[i]||0) > 0);
-    btn.onclick = ()=>{
-      r.ingredients.forEach(i => state.inventory[i]--);
+    const div=document.createElement("div");
+    div.textContent=`${r.name} (${r.points} pts)`;
+    const btn=document.createElement("button");
+    btn.textContent="Craft";
+    btn.disabled = !r.ingredients.every(i=> (state.inventory[i]||0)>0);
+    btn.onclick=()=>{
+      r.ingredients.forEach(i=>state.inventory[i]--);
       state.points += r.points;
       document.getElementById("points").textContent = state.points;
-      pushLog(`Crafted ${r.name} for ${r.points} pts`);
       renderInventory();
       renderRecipes();
       renderTrade();
+      pushLog(`Crafted ${r.name} for ${r.points} pts`);
+      showPopup("Yum!");
     };
     div.appendChild(btn);
     container.appendChild(div);
@@ -180,33 +193,34 @@ function renderRecipes(){
 }
 
 function renderTrade(){
-  const container = document.getElementById("tradeList");
-  container.innerHTML = "";
+  const container=document.getElementById("tradeList");
+  container.innerHTML="";
   TRADE_RULES.forEach(rule=>{
-    const owned = Object.entries(state.inventory)
+    const owned=Object.entries(state.inventory)
       .filter(([n,v])=>getRarity(n)===rule.give)
       .reduce((a,[n,v])=>a+v,0);
-    const possible = Math.floor(owned / rule.amount);
+    const possible=Math.floor(owned/rule.amount);
     if(possible>0){
-      const div = document.createElement("div");
-      div.textContent = `Trade ${rule.amount} ${rule.give} for 1 ${rule.receive}`;
-      const btn = document.createElement("button");
-      btn.textContent = "Trade";
-      btn.onclick = ()=>{
-        let left = rule.amount;
-        for(const [n,v] of Object.entries(state.inventory)){
-          if(getRarity(n)===rule.give && left>0){
-            const use = Math.min(v,left);
-            state.inventory[n]-=use;
-            left -= use;
+      const div=document.createElement("div");
+      div.textContent=`Trade ${rule.amount} ${rule.give} for 1 ${rule.receive}`;
+      const btn=document.createElement("button");
+      btn.textContent="Trade";
+      btn.onclick=()=>{
+        if(confirm(`Are you sure you want to trade ${rule.amount} ${rule.give} for a ${rule.receive}?`)){
+          let left=rule.amount;
+          for(const [n,v] of Object.entries(state.inventory)){
+            if(getRarity(n)===rule.give && left>0){
+              const use=Math.min(v,left);
+              state.inventory[n]-=use;
+              left -= use;
+            }
           }
+          const candidates=INGREDIENTS.filter(i=>i.rarity===rule.receive);
+          addIngredient(candidates[Math.floor(Math.random()*candidates.length)].name);
+          renderInventory();
+          renderTrade();
+          pushLog(`Traded for a ${rule.receive} ingredient`);
         }
-        // pick a random ingredient of receive rarity
-        const candidates = INGREDIENTS.filter(i=>i.rarity===rule.receive);
-        addIngredient(candidates[Math.floor(Math.random()*candidates.length)].name);
-        renderInventory();
-        renderTrade();
-        pushLog(`Traded for a ${rule.receive} ingredient`);
       };
       div.appendChild(btn);
       container.appendChild(div);
@@ -217,40 +231,68 @@ function renderTrade(){
 // Box mechanics
 function openBox(){
   if(state.boxContents.length===0){
-    pushLog("No boxes to open!");
-    return;
+    if(state.freeBoxes>0){
+      state.freeBoxes--;
+      document.getElementById("freeBoxes").textContent = state.freeBoxes;
+      generateBox("free");
+    } else {
+      pushLog("No boxes to open!");
+      showPopup("No boxes!");
+      return;
+    }
   }
-  const box = state.boxContents.shift();
+  const box=state.boxContents.shift();
   pushLog(`Opened box: ${box.join(", ")}`);
   box.forEach(i=>addIngredient(i));
   renderTrade();
 }
 
-function buyBox(){
-  if(state.points<10){
-    pushLog("Not enough points to buy a box!");
-    return;
-  }
-  state.points -= 10;
-  document.getElementById("points").textContent = state.points;
-  // generate a box 2-4 ingredients
-  const count = 2 + Math.floor(Math.random()*3);
-  const box = [];
+function generateBox(tier){
+  const count=2 + Math.floor(Math.random()*3);
+  const box=[];
   for(let i=0;i<count;i++){
-    // weighted random by rarity
-    const rand = Math.random();
     let candidates;
-    if(rand<0.6) candidates = INGREDIENTS.filter(i=>i.rarity==="common");
-    else if(rand<0.9) candidates = INGREDIENTS.filter(i=>i.rarity==="rare");
-    else candidates = INGREDIENTS.filter(i=>i.rarity==="epic");
+    if(tier==="free"){
+      const r = Math.random();
+      if(r<0.7) candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+      else candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
+    } else {
+      const r=Math.random();
+      if(r<0.4) candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+      else if(r<0.8) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
+      else candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
+    }
     box.push(candidates[Math.floor(Math.random()*candidates.length)].name);
   }
   state.boxContents.push(box);
-  pushLog("Bought a new box!");
 }
 
-document.getElementById("buyBox").onclick = buyBox;
-document.getElementById("openBox").onclick = openBox;
+function buyBox(){
+  if(state.points<10){
+    pushLog("Not enough points to buy a premium box!");
+    showPopup("Need 10 points!");
+    return;
+  }
+  state.points -=10;
+  document.getElementById("points").textContent=state.points;
+  generateBox("premium");
+  pushLog("Bought a premium box!");
+}
+
+// Free box timer
+setInterval(()=>{
+  const now=Date.now();
+  if(now - state.lastFreeBox >= 15*60*1000){
+    state.freeBoxes++;
+    document.getElementById("freeBoxes").textContent=state.freeBoxes;
+    state.lastFreeBox=now;
+    pushLog("A free box is ready!");
+  }
+},1000);
+
+// Buttons
+document.getElementById("buyBox").onclick=buyBox;
+document.getElementById("openBox").onclick=openBox;
 
 // Initial render
 renderInventory();
