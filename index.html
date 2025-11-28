@@ -1,161 +1,32 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Vibe Boxes — Ingredient Crafting Game</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cooking Game</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<div class="app">
-  <header>
-    <h1>Vibe Boxes — Upgraded</h1>
-    <div class="top-right">
-      <div id="pointsDisplay" class="big">Points: 0</div>
-      <div class="small">Boxes opened: <span id="openedCount">0</span></div>
-    </div>
-  </header>
+  <h1>Cooking Game</h1>
 
-  <section class="left panel">
-    <div class="stat-row">
-      <div class="stat">Inventory</div>
-      <div style="margin-left:auto">
-        <button id="freeBoxBtn" class="ghost">Free box</button>
-      </div>
-    </div>
-    <div id="inventory" class="inventory"></div>
+  <div id="log"></div>
 
-    <div style="height:8px"></div>
+  <div class="box-buttons">
+    <button id="freeBoxBtn">Open Free Box</button>
+    <button id="paidBoxBtn">Open Paid Box</button>
+    <button id="premiumBoxBtn">Open Premium Box</button>
+  </div>
 
-    <div class="stat-row">
-      <div class="stat">Shop</div>
-      <div style="margin-left:auto" class="small muted">Buy boxes to open</div>
-    </div>
-    <div style="margin-top:8px" class="shop">
-      <div class="panel" style="padding:10px; flex:1">
-        <div class="small muted">Standard Box</div>
-        <div style="display:flex; justify-content:space-between; margin-top:6px;">
-          <div><strong>Cost: <span id="boxCost">100</span> pts</strong>
-          <div class="small muted">Contains 3 ingredients</div></div>
-          <div><button id="buyBoxBtn">Buy</button></div>
-        </div>
-      </div>
-      <div class="panel" style="padding:10px; width:210px;">
-        <div class="small muted">Quick Actions</div>
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <button id="sellAllBtn" class="ghost">Sell all</button>
-          <button id="resetBtn" class="ghost">Reset</button>
-        </div>
-      </div>
-    </div>
+  <h2>Inventory</h2>
+  <div id="inventory"></div>
 
-    <div style="height:10px"></div>
-    <div class="stat-row">
-      <div class="stat">Marketplace</div>
-    </div>
-    <div style="margin-top:8px" class="panel">
-      <div style="display:flex; gap:8px; align-items:center;">
-        <div style="flex:1">
-          <label for="tradeGive">Give (from inventory)</label>
-          <select id="tradeGive" style="width:100%"></select>
-        </div>
-        <div style="width:140px">
-          <label for="tradeRarity">Receive rarity</label>
-          <select id="tradeRarity" style="width:100%">
-            <option value="common">Common</option>
-            <option value="uncommon">Uncommon</option>
-            <option value="rare">Rare</option>
-            <option value="epic">Epic</option>
-          </select>
-        </div>
-        <div style="width:110px; display:flex; align-items:flex-end;">
-          <button id="tradeBtn">Trade 1 → 1</button>
-        </div>
-      </div>
-      <div class="small muted" style="margin-top:8px">
-        Trade 1 of an ingredient for a random ingredient of chosen rarity. No refunds — trade wisely.
-      </div>
-    </div>
+  <h2>Crafting</h2>
+  <div id="recipes"></div>
 
-    <div style="height:10px"></div>
-    <div class="stat-row"><div class="stat">History</div></div>
-    <div id="log" class="log"></div>
-  </section>
+  <h2>Trade</h2>
+  <div id="trades"></div>
 
-  <main class="main panel">
-    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-      <div>
-        <div class="small muted">Open boxes to get ingredients</div>
-        <div style="display:flex; gap:8px; margin-top:8px;" class="boxes-row">
-          <div class="box" style="min-width:230px;">
-            <div>
-              <div style="font-weight:800">Free Box</div>
-              <div class="small muted">Limited & cooldowned</div>
-            </div>
-            <div><button id="openBoxBtn">Open Free</button></div>
-          </div>
-          <div class="box" style="min-width:220px;">
-            <div>
-              <div style="font-weight:800">Standard Box</div>
-              <div class="small muted">3 random ingredients · mixed rarities</div>
-            </div>
-            <div><button id="openPaidBtn" class="ghost">Open (Buy)</button></div>
-          </div>
-          <div class="box" style="min-width:220px;">
-            <div>
-              <div style="font-weight:800">Premium Box</div>
-              <div class="small muted">Higher rare chance · costs more</div>
-            </div>
-            <div><button id="openPremiumBtn" class="ghost">Open (200 pts)</button></div>
-          </div>
-        </div>
-
-        <div style="margin-top:8px">
-          <div class="small muted">Free boxes: <span id="freeBoxesDisplay">0</span> · Cooldown: <span id="cooldownDisplay">ready</span></div>
-          <div class="cooldown-bar" style="margin-top:6px;"><div id="cooldownFill" class="cooldown-fill"></div></div>
-        </div>
-      </div>
-
-      <div style="width:40%; min-width:260px;">
-        <div class="stat">Quick Craft & Level</div>
-        <div style="margin-top:8px;">
-          <div class="small muted">Level: <strong id="levelDisplay">1</strong> · Cap: <strong id="capDisplay">20</strong></div>
-          <div class="small muted">Next level at: <span id="nextLevelPts">100</span> pts</div>
-          <div id="quickCrafts" style="margin-top:8px"></div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top:12px;">
-      <div class="stat-row">
-        <div class="stat">Recipes</div>
-        <div class="small muted" style="margin-left:8px">Craft recipes to earn points</div>
-      </div>
-      <div style="margin-top:10px" class="recipes" id="recipesGrid"></div>
-    </div>
-  </main>
-
-  <footer class="muted">Built with vibes. Save is automatic (localStorage).</footer>
-</div>
-
-<!-- Module scripts -->
-<script type="module">
-  import { INGREDIENTS, RECIPES, BOX_WEIGHTS, PREMIUM_WEIGHTS, BOX_COST, PREMIUM_COST, ING_MAP } 
-    from "./data/ingredients.js";
-
-  import { craftRecipe, sellAll, tradeOne } 
-    from "./data/recipes.js";
-
-  import { openFreeBox, openPaidBox, openPremiumBox, startCooldown } 
-    from "./logic/boxes.js";
-
-  import { renderAll, el } 
-    from "./logic/render.js";
-
-  // Start the game
-  window.addEventListener("DOMContentLoaded", () => {
-      renderAll();
-  });
-</script>
+  <script src="data.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
