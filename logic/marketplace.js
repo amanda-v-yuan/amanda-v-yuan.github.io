@@ -1,4 +1,4 @@
-import { ING_MAP, INGREDIENTS } from './data/ingredients.js';
+import { ING_MAP, INGREDIENTS } from '../data/ingredients.js';
 import { tryAddIngredient } from './logic/inventory.js';
 
 export function tradeOne(state, giveId, receiveRarity, pushLog, renderAll){
