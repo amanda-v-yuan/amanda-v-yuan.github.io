@@ -1,8 +1,8 @@
 // main.js
-import { INGREDIENTS, RECIPES, BOX_WEIGHTS, PREMIUM_WEIGHTS, BOX_COST, PREMIUM_COST, ING_MAP } from './ingredients.js';
-import { craftRecipe, sellAll, tradeOne } from './recipes.js';
-import { openFreeBox, openPaidBox, openPremiumBox, startCooldown } from './boxes.js';
-import { renderAll, el } from './render.js';
+import { INGREDIENTS, RECIPES, BOX_WEIGHTS, PREMIUM_WEIGHTS, BOX_COST, PREMIUM_COST, ING_MAP } from './data/ingredients.js';
+import { craftRecipe, sellAll, tradeOne } from './data/recipes.js';
+import { openFreeBox, openPaidBox, openPremiumBox, startCooldown } from './logic/boxes.js';
+import { renderAll, el } from './logic/render.js';
 
 // DOMContentLoaded ensures HTML is fully loaded before JS runs
 document.addEventListener('DOMContentLoaded', () => {
