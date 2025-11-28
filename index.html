@@ -29,7 +29,6 @@ h1 { text-align:center; }
 .stats, .inventory, .recipes, .actions, .trade { margin:1rem 0; width:100%; max-width:500px; }
 .inventory div, .recipes div, .trade div {
   display:flex;
-  align-items:center;
   justify-content:space-between;
   padding:0.3rem 0.5rem;
   background:var(--card-bg);
@@ -61,13 +60,16 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
   display:none;
   z-index:100;
 }
-.ingredient-icon { width:24px; height:24px; margin-right:5px; border-radius:4px; }
-.recipe-ingredients img { width:20px; height:20px; margin-left:2px; border-radius:4px; }
+.rarity-common { color:var(--common); }
+.rarity-rare { color:var(--rare); }
+.rarity-epic { color:var(--epic); }
 </style>
 </head>
 <body>
 <h1>Ingredient Box Game</h1>
-<div class="stats">Points: <span id="points">0</span> | Free Boxes: <span id="freeBoxes">3</span></div>
+<div class="stats">
+  Points: <span id="points">0</span> | Free Boxes: <span id="freeBoxes">3</span> | Total Boxes: <span id="totalBoxes">0</span>
+</div>
 
 <div class="actions">
   <button id="buyBox">Buy Premium Box (10 pts)</button>
@@ -105,17 +107,17 @@ let state = {
 
 // --- INGREDIENTS ---
 const INGREDIENTS = [
-  {name:"Flour", rarity:"common", image:"images/flour.png"},
-  {name:"Egg", rarity:"common", image:"images/egg.png"},
-  {name:"Milk", rarity:"common", image:"images/milk.png"},
-  {name:"Sugar", rarity:"common", image:"images/sugar.png"},
-  {name:"Cheese", rarity:"rare", image:"images/cheese.png"},
-  {name:"Butter", rarity:"rare", image:"images/butter.png"},
-  {name:"Chocolate", rarity:"epic", image:"images/chocolate.png"},
-  {name:"Vanilla", rarity:"epic", image:"images/vanilla.png"},
-  {name:"Strawberry", rarity:"rare", image:"images/strawberry.png"},
-  {name:"Honey", rarity:"epic", image:"images/honey.png"},
-  {name:"Blueberry", rarity:"epic", image:"images/blueberry.png"},
+  {name:"Flour", rarity:"common"},
+  {name:"Egg", rarity:"common"},
+  {name:"Milk", rarity:"common"},
+  {name:"Sugar", rarity:"common"},
+  {name:"Cheese", rarity:"rare"},
+  {name:"Butter", rarity:"rare"},
+  {name:"Chocolate", rarity:"epic"},
+  {name:"Vanilla", rarity:"epic"},
+  {name:"Strawberry", rarity:"rare"},
+  {name:"Honey", rarity:"epic"},
+  {name:"Blueberry", rarity:"epic"},
 ];
 
 // --- RECIPES ---
@@ -151,6 +153,7 @@ function showPopup(msg){
 
 // --- HELPERS ---
 function getIngredient(name){ return INGREDIENTS.find(i=>i.name===name); }
+function rarityColor(r){ return r==="common"?"var(--common)":r==="rare"?"var(--rare)":"var(--epic)"; }
 function addIngredient(name,qty=1){
   const total = Object.values(state.inventory).reduce((a,b)=>a+b,0);
   if(total + qty > state.inventoryLimit){
@@ -159,8 +162,7 @@ function addIngredient(name,qty=1){
     return false;
   }
   state.inventory[name]=(state.inventory[name]||0)+qty;
-  renderInventory();
-  saveState();
+  renderInventory(); renderRecipes(); renderTrade(); saveState();
   return true;
 }
 
@@ -173,38 +175,18 @@ function renderInventory(){
   for(const [ing,qty] of Object.entries(state.inventory)){
     const data=getIngredient(ing);
     const div=document.createElement("div");
-    const img=document.createElement("img");
-    img.src=data.image; img.className="ingredient-icon";
-    const text=document.createElement("span");
-    text.textContent=`${ing} x${qty}`;
-    text.style.color=rarityColor(data.rarity);
-    div.appendChild(img); div.appendChild(text);
+    div.innerHTML=`${ing} x${qty} <span class="rarity-${data.rarity}">[${data.rarity}]</span>`;
     container.appendChild(div);
   }
 }
-function rarityColor(r){ return r==="common"? "var(--common)": r==="rare"? "var(--rare)": "var(--epic)"; }
 
 function renderRecipes(){
   const container=document.getElementById("recipeList");
   container.innerHTML="";
   RECIPES.forEach(r=>{
     const div=document.createElement("div");
-    const title=document.createElement("span");
-    title.textContent=`${r.name} (${r.points} pts) `;
-    div.appendChild(title);
-
-    // Ingredient icons
-    const icons=document.createElement("span");
-    icons.className="recipe-ingredients";
-    r.ingredients.forEach(i=>{
-      const img=document.createElement("img");
-      img.src=getIngredient(i).image;
-      img.title=i;
-      icons.appendChild(img);
-    });
-    div.appendChild(icons);
-
-    // Craft button
+    let ingText = r.ingredients.join(", ");
+    div.innerHTML=`${r.name} (${r.points} pts) - Ingredients: ${ingText} `;
     const btn=document.createElement("button");
     btn.textContent="Craft";
     btn.disabled = !r.ingredients.every(i=> (state.inventory[i]||0)>0);
@@ -226,7 +208,9 @@ function renderTrade(){
   const container=document.getElementById("tradeList");
   container.innerHTML="";
   TRADE_RULES.forEach(rule=>{
-    const owned=Object.entries(state.inventory).filter(([n,v])=>getIngredient(n).rarity===rule.give).reduce((a,[n,v])=>a+v,0);
+    const owned=Object.entries(state.inventory)
+      .filter(([n,v])=>getIngredient(n).rarity===rule.give)
+      .reduce((a,[n,v])=>a+v,0);
     if(Math.floor(owned/rule.amount)>0){
       const div=document.createElement("div");
       div.textContent=`Trade ${rule.amount} ${rule.give} for 1 ${rule.receive}`;
@@ -260,9 +244,8 @@ function generateBox(tier){
   const box=[];
   for(let i=0;i<count;i++){
     let candidates;
-    if(tier==="free"){
-      candidates = INGREDIENTS.filter(i=>i.rarity!=="epic");
-    } else {
+    if(tier==="free") candidates = INGREDIENTS.filter(i=>i.rarity!=="epic");
+    else {
       const r=Math.random();
       if(r<0.4) candidates=INGREDIENTS.filter(i=>i.rarity==="common");
       else if(r<0.8) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
@@ -272,7 +255,9 @@ function generateBox(tier){
   }
   state.boxContents.push(box);
   saveState();
+  renderTotalBoxes();
 }
+
 function openBox(){
   if(state.boxContents.length===0){
     if(state.freeBoxes>0){
@@ -281,10 +266,14 @@ function openBox(){
     } else { pushLog("No boxes!"); showPopup("No boxes!"); return; }
   }
   const box=state.boxContents.shift();
-  let popupHtml = "Opened box:<br>";
-  box.forEach(i=>{ addIngredient(i); const data=getIngredient(i); popupHtml += `<img src="${data.image}" class="ingredient-icon">${i}<br>`; });
-  showPopup(popupHtml);
-  renderTrade(); saveState();
+  let popupText = "Opened box: " + box.join(", ");
+  box.forEach(i=>addIngredient(i));
+  showPopup(popupText);
+  renderTrade(); renderTotalBoxes(); saveState();
+}
+
+function renderTotalBoxes(){
+  document.getElementById("totalBoxes").textContent = state.boxContents.length + state.freeBoxes;
 }
 
 // --- BUY PREMIUM BOX ---
@@ -292,12 +281,13 @@ function buyBox(){
   if(state.points<10){ pushLog("Not enough points!"); showPopup("Need 10 points!"); return; }
   state.points-=10; document.getElementById("points").textContent=state.points;
   generateBox("premium"); pushLog("Bought a premium box!");
+  renderTotalBoxes();
 }
 
 // --- FREE BOX TIMER ---
 setInterval(()=>{
   const now=Date.now();
-  if(now - state.lastFreeBox >= 15*60*1000){ state.freeBoxes++; document.getElementById("freeBoxes").textContent=state.freeBoxes; state.lastFreeBox=now; pushLog("A free box is ready!"); saveState(); }
+  if(now - state.lastFreeBox >= 15*60*1000){ state.freeBoxes++; document.getElementById("freeBoxes").textContent=state.freeBoxes; state.lastFreeBox=now; pushLog("A free box is ready!"); saveState(); renderTotalBoxes(); }
 },1000);
 
 // --- BUTTONS ---
@@ -308,7 +298,7 @@ document.getElementById("openBox").onclick=openBox;
 loadState();
 document.getElementById("points").textContent=state.points;
 document.getElementById("freeBoxes").textContent=state.freeBoxes;
-renderInventory(); renderRecipes(); renderTrade();
+renderInventory(); renderRecipes(); renderTrade(); renderTotalBoxes();
 </script>
 </body>
 </html>
