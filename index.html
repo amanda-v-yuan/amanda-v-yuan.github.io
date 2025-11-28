@@ -66,18 +66,27 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 .rarity-rare { color:var(--rare); }
 .rarity-epic { color:var(--epic); }
 .missing { color:var(--missing); }
+.toggle {
+  margin:0.5rem 0;
+  cursor:pointer;
+  color:var(--accent);
+  text-decoration:underline;
+}
 </style>
 </head>
 <body>
 <h1>Ingredient Box Game</h1>
 <div class="stats">
-  Points: <span id="points">0</span> | Free Boxes: <span id="freeBoxes">3</span> | Total Boxes: <span id="totalBoxes">0</span>
+  Points: <span id="points">0</span> | Free Boxes: <span id="freeBoxes">3</span>
 </div>
 
 <div class="actions">
   <button id="buyBox">Buy Premium Box (20 pts)</button>
-  <button id="openBox">Open Box</button>
+  <button id="buyUltraBox">Buy Ultra Premium Box (50 pts)</button>
+  <button id="openBox">Open Free Box</button>
 </div>
+
+<div class="toggle" id="toggleCraftable">Show: All Recipes</div>
 
 <div class="inventory">
   <h3>Inventory</h3>
@@ -103,9 +112,9 @@ let state = {
   points:0,
   inventory:{},
   inventoryLimit:30,
-  boxContents:[],
   freeBoxes:3,
   lastFreeBox:Date.now(),
+  showCraftableOnly:false
 };
 
 // --- INGREDIENTS ---
@@ -132,7 +141,7 @@ let RECIPES = [
   {name:"Honey Chocolate", ingredients:["Chocolate","Honey"], points:40},
 ];
 
-// Generate extra random recipes
+// Generate extra recipes
 function generateExtraRecipes(){
   const extra = [];
   for(let i=0;i<5;i++){
@@ -145,6 +154,8 @@ function generateExtraRecipes(){
     const points = ingredients.length * 10;
     extra.push({name:"Recipe "+(i+1), ingredients, points});
   }
+  // Sort by points descending
+  extra.sort((a,b)=>b.points-a.points);
   RECIPES = RECIPES.concat(extra);
 }
 generateExtraRecipes();
@@ -204,13 +215,15 @@ function renderRecipes(){
   const container=document.getElementById("recipeList");
   container.innerHTML="";
   RECIPES.forEach(r=>{
+    const canCraft = r.ingredients.every(i=> (state.inventory[i]||0)>0);
+    if(state.showCraftableOnly && !canCraft) return;
     const div=document.createElement("div");
     // Ingredient text, grey out missing ones
     const ingText = r.ingredients.map(i=> (state.inventory[i]||0)>0 ? i : `<span class="missing">${i}</span>`).join(", ");
     div.innerHTML=`${r.name} (${r.points} pts) - Ingredients: ${ingText} `;
     const btn=document.createElement("button");
     btn.textContent="Craft";
-    btn.disabled = !r.ingredients.every(i=> (state.inventory[i]||0)>0);
+    btn.disabled = !canCraft;
     btn.onclick=()=>{
       r.ingredients.forEach(i=>state.inventory[i]--);
       state.points += r.points;
@@ -264,54 +277,58 @@ function renderTrade(){
 }
 
 // --- BOX MECHANICS ---
-function generateBox(tier){
-  const count=2+Math.floor(Math.random()*3);
-  const box=[];
-  for(let i=0;i<count;i++){
+function openBox(tier){
+  let boxCount = 2 + Math.floor(Math.random()*3);
+  const box = [];
+  for(let i=0;i<boxCount;i++){
     let candidates;
     if(tier==="free") candidates = INGREDIENTS.filter(i=>i.rarity!=="epic");
-    else {
+    else if(tier==="premium"){
       const r=Math.random();
       if(r<0.4) candidates=INGREDIENTS.filter(i=>i.rarity==="common");
       else if(r<0.8) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
       else candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
+    } else if(tier==="ultra"){
+      const r=Math.random();
+      if(r<0.2) candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+      else if(r<0.6) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
+      else candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
     }
     box.push(candidates[Math.floor(Math.random()*candidates.length)].name);
   }
-  state.boxContents.push(box);
-  saveState();
-  renderTotalBoxes();
-}
-
-function openBox(){
-  if(state.boxContents.length===0){
-    if(state.freeBoxes>0){
-      state.freeBoxes--; document.getElementById("freeBoxes").textContent=state.freeBoxes;
-      generateBox("free");
-    } else { pushLog("No boxes!"); showPopup("No boxes!"); return; }
-  }
-  const box=state.boxContents.shift();
   addIngredients(box);
-  showPopup("Opened box: "+box.join(", "));
-  pushLog("Opened box: "+box.join(", "));
-  renderTrade(); renderTotalBoxes(); saveState();
+  showPopup(`Opened ${tier} box: ${box.join(", ")}`);
+  pushLog(`Opened ${tier} box: ${box.join(", ")}`);
 }
 
-function addIngredients(box){
-  box.forEach(i=>addIngredient(i));
-}
+function addIngredients(box){ box.forEach(i=>addIngredient(i)); }
 
-function renderTotalBoxes(){
-  document.getElementById("totalBoxes").textContent = state.boxContents.length + state.freeBoxes;
-}
-
-// --- BUY PREMIUM BOX ---
-function buyBox(){
+// --- BUY BOX BUTTONS ---
+document.getElementById("buyBox").onclick = () => {
   if(state.points<20){ pushLog("Not enough points!"); showPopup("Need 20 points!"); return; }
   state.points-=20; document.getElementById("points").textContent=state.points;
-  generateBox("premium"); pushLog("Bought a premium box!");
-  renderTotalBoxes();
-}
+  openBox("premium");
+};
+document.getElementById("buyUltraBox").onclick = () => {
+  if(state.points<50){ pushLog("Not enough points!"); showPopup("Need 50 points!"); return; }
+  state.points-=50; document.getElementById("points").textContent=state.points;
+  openBox("ultra");
+};
+
+document.getElementById("openBox").onclick = () => {
+  if(state.freeBoxes>0){
+    state.freeBoxes--;
+    document.getElementById("freeBoxes").textContent=state.freeBoxes;
+    openBox("free");
+  } else { pushLog("No free boxes!"); showPopup("No free boxes!"); }
+};
+
+// --- TOGGLE CRAFTABLE ---
+document.getElementById("toggleCraftable").onclick = () => {
+  state.showCraftableOnly = !state.showCraftableOnly;
+  document.getElementById("toggleCraftable").textContent = state.showCraftableOnly ? "Show: Craftable Only" : "Show: All Recipes";
+  renderRecipes();
+};
 
 // --- FREE BOX TIMER ---
 setInterval(()=>{
@@ -319,19 +336,15 @@ setInterval(()=>{
   if(now - state.lastFreeBox >= 15*60*1000){
     if(state.freeBoxes<3){ state.freeBoxes++; document.getElementById("freeBoxes").textContent=state.freeBoxes; }
     state.lastFreeBox=now;
-    pushLog("A free box is ready!"); saveState(); renderTotalBoxes();
+    pushLog("A free box is ready!"); saveState();
   }
 },1000);
-
-// --- BUTTONS ---
-document.getElementById("buyBox").onclick=buyBox;
-document.getElementById("openBox").onclick=openBox;
 
 // --- INITIAL LOAD ---
 loadState();
 document.getElementById("points").textContent=state.points;
 document.getElementById("freeBoxes").textContent=state.freeBoxes;
-renderInventory(); renderRecipes(); renderTrade(); renderTotalBoxes();
+renderInventory(); renderRecipes(); renderTrade();
 </script>
 </body>
 </html>
