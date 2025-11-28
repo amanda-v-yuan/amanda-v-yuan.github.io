@@ -1,6 +1,6 @@
 // recipes.js
 import { state, tryAddIngredient, addPoints, pushLog } from '../logic/boxes.js';
-import { ING_MAP, RECIPES } from './data/ingredients.js';
+import { ING_MAP, RECIPES } from './ingredients.js';
 import { renderAll } from '../logic/render.js';
 
 export function craftRecipe(recipeId){
