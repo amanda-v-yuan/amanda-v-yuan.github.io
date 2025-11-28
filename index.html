@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vibe Boxes — Ingredient Crafting Game</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-wrapper" class="app">
+    <header>
+      <h1>Vibe Boxes — Upgraded</h1>
+      <div class="top-right">
+        <div id="pointsDisplay" class="big">Points: 0</div>
+        <div class="small">Boxes opened: <span id="openedCount">0</span></div>
+      </div>
+    </header>
+
+    <section class="left panel">
+      <div class="stat-row">
+        <div class="stat">Inventory</div>
+        <div style="margin-left:auto">
+          <button id="freeBoxBtn" class="ghost" title="Open a free box (limited/cooldown)">Free box</button>
+        </div>
+      </div>
+      <div id="inventory" class="inventory"></div>
+
+      <div class="stat-row">
+        <div class="stat">Shop</div>
+      </div>
+      <div class="shop">
+        <div class="panel shop-item">
+          <div class="small muted">Standard Box</div>
+          <div class="flex-between">
+            <div><strong>Cost: <span id="boxCost">100</span> pts</strong></div>
+            <div><button id="buyBoxBtn">Buy</button></div>
+          </div>
+        </div>
+        <div class="panel shop-item">
+          <div class="small muted">Quick Actions</div>
+          <div style="display:flex; gap:8px;">
+            <button id="sellAllBtn" class="ghost">Sell all</button>
+            <button id="resetBtn" class="ghost">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat">Marketplace</div>
+      </div>
+      <div class="panel" id="marketplace">
+        <div id="trade-text">Loading trade...</div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button id="trade-confirm">Confirm</button>
+          <button id="trade-decline">Decline</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat">History</div>
+      </div>
+      <div id="log" class="log"></div>
+    </section>
+
+    <main class="main panel">
+      <div class="stat-row">
+        <div class="stat">Recipes</div>
+      </div>
+      <div class="recipes" id="recipesGrid"></div>
+    </main>
+
+    <footer class="muted">Built with vibes. Save is automatic (localStorage).</footer>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
