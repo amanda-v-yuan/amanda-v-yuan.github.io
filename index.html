@@ -97,6 +97,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
   50% { transform:translate(-50%,-50%) scale(1.2); opacity:1; }
   100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
 }
+.star { color:gold; margin-left:2px; }
 </style>
 </head>
 <body>
@@ -112,7 +113,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 </div>
 
 <div class="inventory">
-  <h3>Inventory</h3>
+  <h3>Inventory (<span id="inventoryCount">0</span>/<span id="inventoryMax">30</span>)</h3>
   <div class="toggle-group">
     <button id="inventoryAll" class="selected">All</button>
     <button id="inventoryInStock">In Stock Only</button>
@@ -130,7 +131,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 </div>
 
 <div class="trade">
-  <h3>Trade</h3>
+  <h3>Trading Post</h3>
   <div id="tradeList"></div>
 </div>
 
@@ -146,7 +147,10 @@ let state = {
   freeBoxes:3,
   lastFreeBox:Date.now(),
   showCraftableOnly:false,
-  showInStockOnly:false
+  showInStockOnly:false,
+  recipeCrafted:{},
+  tradeOptions:[],
+  tradeRefreshTime:0
 };
 
 // --- INGREDIENTS ---
@@ -162,11 +166,10 @@ const INGREDIENTS = [
   {name:"Strawberry", rarity:"rare", points:15},
   {name:"Honey", rarity:"epic", points:30},
   {name:"Blueberry", rarity:"epic", points:30},
-  {name:"Dragonfruit", rarity:"legendary", points:60},
-  {name:"Gold Dust", rarity:"legendary", points:60},
+  {name:"Dragonfruit", rarity:"legendary", points:60}
 ];
 
-// --- RECIPES (points sum of ingredient points) ---
+// --- RECIPES ---
 const RECIPES = [
   {name:"Cake", ingredients:["Flour","Egg","Sugar"], points:15},
   {name:"Cheese Omelette", ingredients:["Egg","Cheese","Milk"], points:25},
@@ -178,13 +181,6 @@ const RECIPES = [
   {name:"Dragonfruit Surprise", ingredients:["Dragonfruit","Egg","Sugar"], points:70}
 ];
 RECIPES.sort((a,b)=>b.points-a.points);
-
-// --- TRADE RULES ---
-const TRADE_RULES = [
-  {give:"common", amount:5, receive:"rare"},
-  {give:"rare", amount:3, receive:"epic"},
-  {give:"epic", amount:3, receive:"legendary"}
-];
 
 // --- LOCAL STORAGE ---
 function saveState(){ localStorage.setItem("ingredientGameState",JSON.stringify(state)); }
@@ -212,7 +208,7 @@ function addIngredient(name,qty=1){
   return true;
 }
 
-// --- ANIMATION ---
+// --- BOX ANIMATION ---
 function animateBox(tier, callback){
   const boxDiv = document.createElement("div");
   boxDiv.className = "box-animation";
@@ -225,57 +221,64 @@ function animateBox(tier, callback){
   },800);
 }
 
-// --- OPEN BOX LOGIC ---
+// --- OPEN BOX ---
 function openBox(tier){
   animateBox(tier, ()=>{
-    const minItems = tier==="free"?2:tier==="premium"?3:4;
-    const maxItems = tier==="free"?3:tier==="premium"?4:5;
-    const boxCount = minItems + Math.floor(Math.random()*(maxItems-minItems+1));
+    let minItems = tier==="free"?2:tier==="premium"?3:4;
+    let maxItems = tier==="free"?3:tier==="premium"?4:5;
+    let count = minItems + Math.floor(Math.random()*(maxItems-minItems+1));
     const box = [];
-    for(let i=0;i<boxCount;i++){
-      const r = Math.random();
-      let candidates;
-      if(tier==="free"){
-        if(r<0.01) candidates=INGREDIENTS.filter(i=>i.rarity==="legendary");
-        else if(r<0.15) candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
-        else if(r<0.4) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
-        else candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+    for(let i=0;i<count;i++){
+      let r=Math.random();
+      let candidates=[];
+      // guarantee 1 common
+      if(i===0){ candidates=INGREDIENTS.filter(x=>x.rarity=="common"); }
+      else if(tier==="free"){
+        if(r<0.01) candidates=INGREDIENTS.filter(x=>x.rarity=="legendary");
+        else if(r<0.02) candidates=INGREDIENTS.filter(x=>x.rarity=="epic");
+        else if(r<0.1) candidates=INGREDIENTS.filter(x=>x.rarity=="rare");
+        else candidates=INGREDIENTS.filter(x=>x.rarity=="common");
       } else if(tier==="premium"){
-        if(r<0.02) candidates=INGREDIENTS.filter(i=>i.rarity==="legendary");
-        else if(r<0.15) candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
-        else if(r<0.35) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
-        else candidates=INGREDIENTS.filter(i=>i.rarity==="common");
-      } else {
-        if(r<0.05) candidates=INGREDIENTS.filter(i=>i.rarity==="legendary");
-        else if(r<0.25) candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
-        else if(r<0.55) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
-        else candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+        if(r<0.02) candidates=INGREDIENTS.filter(x=>x.rarity=="legendary");
+        else if(r<0.05) candidates=INGREDIENTS.filter(x=>x.rarity=="epic");
+        else if(r<0.2) candidates=INGREDIENTS.filter(x=>x.rarity=="rare");
+        else candidates=INGREDIENTS.filter(x=>x.rarity=="common");
+      } else { // ultra
+        if(r<0.05) candidates=INGREDIENTS.filter(x=>x.rarity=="legendary");
+        else if(r<0.1) candidates=INGREDIENTS.filter(x=>x.rarity=="epic");
+        else if(r<0.25) candidates=INGREDIENTS.filter(x=>x.rarity=="rare");
+        else candidates=INGREDIENTS.filter(x=>x.rarity=="common");
       }
-      box.push(candidates[Math.floor(Math.random()*candidates.length)].name);
+      let item = candidates[Math.floor(Math.random()*candidates.length)].name;
+      box.push(item);
+      addIngredient(item);
     }
-    box.forEach(i=>addIngredient(i));
     showPopup(`Opened ${tier} box: ${box.join(", ")}`);
     pushLog(`Opened ${tier} box: ${box.join(", ")}`);
   });
 }
 
-// --- RENDER FUNCTIONS (Inventory, Recipes, Trade) ---
+// --- RENDER INVENTORY ---
 function renderInventory(){
   const container = document.getElementById("inventoryList");
   container.innerHTML="";
-  const sorted = Object.entries(state.inventory).sort((a,b)=>{
-    const rank = {legendary:4, epic:3, rare:2, common:1};
-    return rank[getIngredient(b[0]).rarity]-rank[getIngredient(a[0]).rarity];
-  });
-  sorted.forEach(([ing,qty])=>{
-    if(state.showInStockOnly && qty<=0) return;
-    const data = getIngredient(ing);
-    const div = document.createElement("div");
-    div.innerHTML=`${ing} x${qty} <span class="rarity-${data.rarity}">[${data.rarity}]</span>`;
-    container.appendChild(div);
-  });
+  let totalItems = Object.values(state.inventory).reduce((a,b)=>a+b,0);
+  document.getElementById("inventoryCount").textContent=totalItems;
+  Object.entries(state.inventory)
+    .sort((a,b)=>{
+      const rank = {legendary:4, epic:3, rare:2, common:1};
+      return rank[getIngredient(b[0]).rarity]-rank[getIngredient(a[0]).rarity];
+    })
+    .forEach(([name,qty])=>{
+      if(state.showInStockOnly && qty<=0) return;
+      const data = getIngredient(name);
+      const div = document.createElement("div");
+      div.innerHTML=`${name} x${qty} <span class="rarity-${data.rarity}">[${data.rarity}]</span>`;
+      container.appendChild(div);
+    });
 }
 
+// --- RENDER RECIPES ---
 function renderRecipes(){
   const container = document.getElementById("recipeList");
   container.innerHTML="";
@@ -284,14 +287,20 @@ function renderRecipes(){
     if(state.showCraftableOnly && !canCraft) return;
     const div=document.createElement("div");
     const ingText = r.ingredients.map(i=> (state.inventory[i]||0)>0 ? i : `<span class="missing">${i}</span>`).join(", ");
-    div.innerHTML=`${r.name} (${r.points} pts) - Ingredients: ${ingText} `;
-    const btn = document.createElement("button");
+    const count = state.recipeCrafted[r.name]||0;
+    let stars="";
+    if(count>=1 && count<=2) stars="★";
+    else if(count>=3 && count<=5) stars="★★";
+    else if(count>=6) stars="★★★";
+    div.innerHTML=`${r.name} (${r.points} pts) - Ingredients: ${ingText} <span class="star">${stars}</span>`;
+    const btn=document.createElement("button");
     btn.textContent="Craft";
     btn.disabled = !canCraft;
-    btn.onclick = ()=>{
+    btn.onclick=()=>{
       r.ingredients.forEach(i=>state.inventory[i]--);
-      state.points += r.points;
+      state.points+=r.points;
       document.getElementById("points").textContent=state.points;
+      state.recipeCrafted[r.name]=(state.recipeCrafted[r.name]||0)+1;
       renderInventory(); renderRecipes(); renderTrade();
       pushLog(`Crafted ${r.name} for ${r.points} pts`);
       showPopup("Yum!");
@@ -302,40 +311,51 @@ function renderRecipes(){
   });
 }
 
+// --- RENDER TRADING POST ---
+function generateTradeOptions(){
+  const inventoryItems = Object.entries(state.inventory).filter(([n,q])=>q>0).map(([n])=>n);
+  if(inventoryItems.length===0) return;
+  state.tradeOptions=[];
+  for(let i=0;i<3;i++){
+    const give = inventoryItems[Math.floor(Math.random()*inventoryItems.length)];
+    let receiveCandidates = INGREDIENTS.filter(x=>x.name!==give);
+    const receive = receiveCandidates[Math.floor(Math.random()*receiveCandidates.length)].name;
+    state.tradeOptions.push({give:give, receive:receive});
+  }
+  state.tradeRefreshTime=Date.now();
+}
+
 function renderTrade(){
   const container=document.getElementById("tradeList");
   container.innerHTML="";
-  TRADE_RULES.forEach(rule=>{
-    const owned=Object.entries(state.inventory).filter(([n,v])=>getIngredient(n).rarity===rule.give).reduce((a,[n,v])=>a+v,0);
-    if(Math.floor(owned/rule.amount)>0){
-      const div=document.createElement("div");
-      div.textContent=`Trade ${rule.amount} ${rule.give} for 1 ${rule.receive}`;
-      const btn=document.createElement("button");
-      btn.textContent="Trade";
-      btn.onclick=()=>{
-        if(confirm(`Trade ${rule.amount} ${rule.give} for 1 ${rule.receive}?`)){
-          let left=rule.amount;
-          const traded=[];
-          for(const [n,v] of Object.entries(state.inventory)){
-            if(getIngredient(n).rarity===rule.give && left>0){
-              const use=Math.min(v,left);
-              state.inventory[n]-=use;
-              traded.push(`${n} x${use}`);
-              left -= use;
-            }
-          }
-          const candidates=INGREDIENTS.filter(i=>i.rarity===rule.receive);
-          const received = candidates[Math.floor(Math.random()*candidates.length)].name;
-          addIngredient(received);
-          renderInventory(); renderTrade();
-          pushLog(`Traded [${traded.join(", ")}], received ${received}`);
-          showPopup(`Traded [${traded.join(", ")}], received ${received}`);
-        }
-      };
-      div.appendChild(btn);
-      container.appendChild(div);
-    }
+  state.tradeOptions.forEach((opt,idx)=>{
+    const div=document.createElement("div");
+    div.textContent=`Trade 5 ${opt.give} → 1 ${opt.receive}`;
+    const btn=document.createElement("button");
+    btn.textContent="Trade";
+    btn.disabled=(state.inventory[opt.give]||0)<5;
+    btn.onclick=()=>{
+      if(confirm(`Trade 5 ${opt.give} for 1 ${opt.receive}?`)){
+        state.inventory[opt.give]-=5;
+        addIngredient(opt.receive,1);
+        pushLog(`Traded 5 ${opt.give}, received 1 ${opt.receive}`);
+        showPopup(`Traded 5 ${opt.give}, received 1 ${opt.receive}`);
+        renderInventory(); renderTrade(); saveState();
+      }
+    };
+    div.appendChild(btn);
+    container.appendChild(div);
   });
+  const refreshBtn=document.createElement("button");
+  refreshBtn.textContent="Refresh Trades";
+  const cooldown = Math.max(0,60 - Math.floor((Date.now()-state.tradeRefreshTime)/1000));
+  refreshBtn.disabled = cooldown>0;
+  refreshBtn.onclick=()=>{
+    generateTradeOptions();
+    renderTrade();
+  };
+  if(cooldown>0) refreshBtn.textContent+=` (${cooldown}s)`;
+  container.appendChild(refreshBtn);
 }
 
 // --- BUTTONS ---
@@ -367,7 +387,7 @@ document.getElementById("inventoryInStock").onclick = ()=>{ state.showInStockOnl
 // --- FREE BOX TIMER ---
 setInterval(()=>{
   const now=Date.now();
-  if(now - state.lastFreeBox >= 15*60*1000){
+  if(now-state.lastFreeBox>15*60*1000){
     if(state.freeBoxes<3){ state.freeBoxes++; document.getElementById("freeBoxes").textContent=state.freeBoxes; }
     state.lastFreeBox=now;
     pushLog("A free box is ready!"); saveState();
@@ -378,6 +398,7 @@ setInterval(()=>{
 loadState();
 document.getElementById("points").textContent=state.points;
 document.getElementById("freeBoxes").textContent=state.freeBoxes;
+if(state.tradeOptions.length===0) generateTradeOptions();
 renderInventory(); renderRecipes(); renderTrade();
 </script>
 </body>
