@@ -1,7 +1,7 @@
 // recipes.js
-import { state, tryAddIngredient, addPoints, pushLog } from './logic/boxes.js';
+import { state, tryAddIngredient, addPoints, pushLog } from '../logic/boxes.js';
 import { ING_MAP, RECIPES } from './data/ingredients.js';
-import { renderAll } from './logic/render.js';
+import { renderAll } from '../logic/render.js';
 
 export function craftRecipe(recipeId){
   const recipe = RECIPES.find(r=>r.id===recipeId);
