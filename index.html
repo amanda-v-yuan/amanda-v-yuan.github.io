@@ -14,7 +14,11 @@
   --common:#cccccc;
   --rare:#66ccff;
   --epic:#ff99ff;
+  --legendary:#ff5500;
   --missing:#555555;
+  --gradient-free: linear-gradient(135deg,#1e3c72,#2a5298);
+  --gradient-premium: linear-gradient(135deg,#0f850f,#45c45d);
+  --gradient-ultra: linear-gradient(135deg,#8a2be2,#c77fff);
 }
 body {
   margin:0;
@@ -46,7 +50,9 @@ button {
   border-radius:6px;
   font-size:1rem;
   cursor:pointer;
+  transition:0.3s;
 }
+button.selected { background:var(--accent); color:#000; }
 button:disabled { opacity:0.4; cursor:not-allowed; }
 .log { max-height:150px; overflow-y:auto; width:100%; background:var(--card-bg); padding:0.5rem; border-radius:6px; font-size:0.9rem; }
 .popup {
@@ -65,9 +71,32 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 .rarity-common { color:var(--common); }
 .rarity-rare { color:var(--rare); }
 .rarity-epic { color:var(--epic); }
+.rarity-legendary { color:var(--legendary); }
 .missing { color:var(--missing); }
 .toggle-group { display:flex; justify-content:center; margin:0.5rem 0; }
 .toggle-group button { margin:0 0.2rem; }
+.box-animation {
+  position:fixed;
+  width:100px;
+  height:100px;
+  background:var(--gradient-free);
+  top:50%; left:50%;
+  transform:translate(-50%,-50%) scale(0);
+  border-radius:10px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:#fff;
+  font-weight:bold;
+  font-size:1rem;
+  z-index:200;
+  animation:openBox 0.8s forwards;
+}
+@keyframes openBox {
+  0% { transform:translate(-50%,-50%) scale(0); opacity:0; }
+  50% { transform:translate(-50%,-50%) scale(1.2); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
+}
 </style>
 </head>
 <body>
@@ -77,15 +106,15 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 </div>
 
 <div class="actions">
-  <button id="buyBox">Buy Premium Box (20 pts)</button>
-  <button id="buyUltraBox">Buy Ultra Premium Box (50 pts)</button>
-  <button id="openBox">Open Free Box</button>
+  <button id="buyBox" style="background:var(--gradient-premium)">Buy Premium Box (20 pts)</button>
+  <button id="buyUltraBox" style="background:var(--gradient-ultra)">Buy Ultra Premium Box (50 pts)</button>
+  <button id="openBox" style="background:var(--gradient-free)">Open Free Box</button>
 </div>
 
 <div class="inventory">
   <h3>Inventory</h3>
   <div class="toggle-group">
-    <button id="inventoryAll">All</button>
+    <button id="inventoryAll" class="selected">All</button>
     <button id="inventoryInStock">In Stock Only</button>
   </div>
   <div id="inventoryList"></div>
@@ -94,7 +123,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 <div class="recipes">
   <h3>Recipes</h3>
   <div class="toggle-group">
-    <button id="recipesAll">All Recipes</button>
+    <button id="recipesAll" class="selected">All Recipes</button>
     <button id="recipesCraftable">Craftable Only</button>
   </div>
   <div id="recipeList"></div>
@@ -133,9 +162,11 @@ const INGREDIENTS = [
   {name:"Strawberry", rarity:"rare", points:15},
   {name:"Honey", rarity:"epic", points:30},
   {name:"Blueberry", rarity:"epic", points:30},
+  {name:"Dragonfruit", rarity:"legendary", points:60},
+  {name:"Gold Dust", rarity:"legendary", points:60},
 ];
 
-// --- HARD-CODED RECIPES (points = sum of ingredient points) ---
+// --- RECIPES (points sum of ingredient points) ---
 const RECIPES = [
   {name:"Cake", ingredients:["Flour","Egg","Sugar"], points:15},
   {name:"Cheese Omelette", ingredients:["Egg","Cheese","Milk"], points:25},
@@ -144,15 +175,15 @@ const RECIPES = [
   {name:"Honey Chocolate", ingredients:["Chocolate","Honey"], points:60},
   {name:"Vanilla Cake", ingredients:["Flour","Egg","Vanilla"], points:40},
   {name:"Blueberry Pie", ingredients:["Flour","Butter","Blueberry"], points:50},
-  {name:"Chocolate Berry", ingredients:["Chocolate","Strawberry"], points:45}
+  {name:"Dragonfruit Surprise", ingredients:["Dragonfruit","Egg","Sugar"], points:70}
 ];
-// Sort recipes by points descending
 RECIPES.sort((a,b)=>b.points-a.points);
 
 // --- TRADE RULES ---
 const TRADE_RULES = [
   {give:"common", amount:5, receive:"rare"},
   {give:"rare", amount:3, receive:"epic"},
+  {give:"epic", amount:3, receive:"legendary"}
 ];
 
 // --- LOCAL STORAGE ---
@@ -181,16 +212,60 @@ function addIngredient(name,qty=1){
   return true;
 }
 
-// --- RENDER INVENTORY ---
+// --- ANIMATION ---
+function animateBox(tier, callback){
+  const boxDiv = document.createElement("div");
+  boxDiv.className = "box-animation";
+  boxDiv.style.background = tier==="free"? "var(--gradient-free)":tier==="premium"? "var(--gradient-premium)":"var(--gradient-ultra)";
+  boxDiv.textContent = tier.charAt(0).toUpperCase()+tier.slice(1);
+  document.body.appendChild(boxDiv);
+  setTimeout(()=>{
+    document.body.removeChild(boxDiv);
+    callback();
+  },800);
+}
+
+// --- OPEN BOX LOGIC ---
+function openBox(tier){
+  animateBox(tier, ()=>{
+    const minItems = tier==="free"?2:tier==="premium"?3:4;
+    const maxItems = tier==="free"?3:tier==="premium"?4:5;
+    const boxCount = minItems + Math.floor(Math.random()*(maxItems-minItems+1));
+    const box = [];
+    for(let i=0;i<boxCount;i++){
+      const r = Math.random();
+      let candidates;
+      if(tier==="free"){
+        if(r<0.01) candidates=INGREDIENTS.filter(i=>i.rarity==="legendary");
+        else if(r<0.15) candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
+        else if(r<0.4) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
+        else candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+      } else if(tier==="premium"){
+        if(r<0.02) candidates=INGREDIENTS.filter(i=>i.rarity==="legendary");
+        else if(r<0.15) candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
+        else if(r<0.35) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
+        else candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+      } else {
+        if(r<0.05) candidates=INGREDIENTS.filter(i=>i.rarity==="legendary");
+        else if(r<0.25) candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
+        else if(r<0.55) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
+        else candidates=INGREDIENTS.filter(i=>i.rarity==="common");
+      }
+      box.push(candidates[Math.floor(Math.random()*candidates.length)].name);
+    }
+    box.forEach(i=>addIngredient(i));
+    showPopup(`Opened ${tier} box: ${box.join(", ")}`);
+    pushLog(`Opened ${tier} box: ${box.join(", ")}`);
+  });
+}
+
+// --- RENDER FUNCTIONS (Inventory, Recipes, Trade) ---
 function renderInventory(){
   const container = document.getElementById("inventoryList");
   container.innerHTML="";
-  // Sort inventory by rarity: epic > rare > common
   const sorted = Object.entries(state.inventory).sort((a,b)=>{
-    const rA = getIngredient(a[0]).rarity;
-    const rB = getIngredient(b[0]).rarity;
-    const rank = {epic:3, rare:2, common:1};
-    return rank[rB]-rank[rA];
+    const rank = {legendary:4, epic:3, rare:2, common:1};
+    return rank[getIngredient(b[0]).rarity]-rank[getIngredient(a[0]).rarity];
   });
   sorted.forEach(([ing,qty])=>{
     if(state.showInStockOnly && qty<=0) return;
@@ -201,7 +276,6 @@ function renderInventory(){
   });
 }
 
-// --- RENDER RECIPES ---
 function renderRecipes(){
   const container = document.getElementById("recipeList");
   container.innerHTML="";
@@ -228,7 +302,6 @@ function renderRecipes(){
   });
 }
 
-// --- RENDER TRADE ---
 function renderTrade(){
   const container=document.getElementById("tradeList");
   container.innerHTML="";
@@ -265,31 +338,6 @@ function renderTrade(){
   });
 }
 
-// --- BOXES ---
-function openBox(tier){
-  const boxCount = 2 + Math.floor(Math.random()*3);
-  const box = [];
-  for(let i=0;i<boxCount;i++){
-    let candidates;
-    if(tier==="free") candidates=INGREDIENTS.filter(i=>i.rarity!=="epic");
-    else if(tier==="premium"){
-      const r=Math.random();
-      if(r<0.4) candidates=INGREDIENTS.filter(i=>i.rarity==="common");
-      else if(r<0.8) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
-      else candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
-    } else if(tier==="ultra"){
-      const r=Math.random();
-      if(r<0.2) candidates=INGREDIENTS.filter(i=>i.rarity==="common");
-      else if(r<0.6) candidates=INGREDIENTS.filter(i=>i.rarity==="rare");
-      else candidates=INGREDIENTS.filter(i=>i.rarity==="epic");
-    }
-    box.push(candidates[Math.floor(Math.random()*candidates.length)].name);
-  }
-  box.forEach(i=>addIngredient(i));
-  showPopup(`Opened ${tier} box: ${box.join(", ")}`);
-  pushLog(`Opened ${tier} box: ${box.join(", ")}`);
-}
-
 // --- BUTTONS ---
 document.getElementById("buyBox").onclick = () => {
   if(state.points<20){ pushLog("Not enough points!"); showPopup("Need 20 points!"); return; }
@@ -306,13 +354,15 @@ document.getElementById("openBox").onclick = () => {
   else { pushLog("No free boxes!"); showPopup("No free boxes!"); }
 };
 
-// --- TOGGLE RECIPE ---
-document.getElementById("recipesAll").onclick = ()=>{ state.showCraftableOnly=false; renderRecipes(); };
-document.getElementById("recipesCraftable").onclick = ()=>{ state.showCraftableOnly=true; renderRecipes(); };
-
-// --- TOGGLE INVENTORY ---
-document.getElementById("inventoryAll").onclick = ()=>{ state.showInStockOnly=false; renderInventory(); };
-document.getElementById("inventoryInStock").onclick = ()=>{ state.showInStockOnly=true; renderInventory(); };
+// --- TOGGLE BUTTONS ---
+function toggleButtons(group, selectedBtn){
+  group.forEach(b=>b.classList.remove("selected"));
+  selectedBtn.classList.add("selected");
+}
+document.getElementById("recipesAll").onclick = ()=>{ state.showCraftableOnly=false; renderRecipes(); toggleButtons([document.getElementById("recipesAll"),document.getElementById("recipesCraftable")], document.getElementById("recipesAll")); };
+document.getElementById("recipesCraftable").onclick = ()=>{ state.showCraftableOnly=true; renderRecipes(); toggleButtons([document.getElementById("recipesAll"),document.getElementById("recipesCraftable")], document.getElementById("recipesCraftable")); };
+document.getElementById("inventoryAll").onclick = ()=>{ state.showInStockOnly=false; renderInventory(); toggleButtons([document.getElementById("inventoryAll"),document.getElementById("inventoryInStock")], document.getElementById("inventoryAll")); };
+document.getElementById("inventoryInStock").onclick = ()=>{ state.showInStockOnly=true; renderInventory(); toggleButtons([document.getElementById("inventoryAll"),document.getElementById("inventoryInStock")], document.getElementById("inventoryInStock")); };
 
 // --- FREE BOX TIMER ---
 setInterval(()=>{
