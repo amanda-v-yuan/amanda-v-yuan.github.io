@@ -10,5 +10,5 @@ export function craftRecipe(recipeId){
   for(const [rid,c] of Object.entries(recipe.requires)){
     if((state.inventory[rid]||0)<c) missing.push(`${ING_MAP[rid]?.name || rid} x${c-(state.inventory[rid]||0)}`);
   }
-  if(missing.length){ pushLog('Missing ingredients: '+missing.join(', ')); renderAll(); return; }
- 
+  if(missing.length){ pushLog('Missing ingredients: '+missing.join(', ')); renderAll(); return; 
+                    }}
