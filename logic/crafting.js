@@ -1,4 +1,4 @@
-import { ING_MAP } from './data/ingredients.js';
+import { ING_MAP } from '../data/ingredients.js';
 
 export function craftRecipe(state, RECIPES, recipeId, addPoints, pushLog, renderAll){
   const recipe = RECIPES.find(r=>r.id===recipeId);

@@ -1,7 +1,7 @@
 // render.js
 import { state, inventoryCap, nextLevelPoints, el } from './logic/boxes.js';
-import { ING_MAP, RECIPES } from './data/ingredients.js';
-import { craftRecipe } from './data/recipes.js';
+import { ING_MAP, RECIPES } from '../data/ingredients.js';
+import { craftRecipe } from '../data/recipes.js';
 
 export function renderAll(){
   renderInventory();
