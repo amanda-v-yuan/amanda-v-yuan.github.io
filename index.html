@@ -139,10 +139,23 @@
 </div>
 
 <!-- Module scripts -->
-<script type="module" src="data/ingredients.js"></script>
-<script type="module" src="data/recipes.js"></script>
-<script type="module" src="logic/boxes.js"></script>
-<script type="module" src="logic/render.js"></script>
-<script type="module" src="main.js"></script>
+<script type="module">
+  import { INGREDIENTS, RECIPES, BOX_WEIGHTS, PREMIUM_WEIGHTS, BOX_COST, PREMIUM_COST, ING_MAP } 
+    from "./data/ingredients.js";
+
+  import { craftRecipe, sellAll, tradeOne } 
+    from "./data/recipes.js";
+
+  import { openFreeBox, openPaidBox, openPremiumBox, startCooldown } 
+    from "./logic/boxes.js";
+
+  import { renderAll, el } 
+    from "./logic/render.js";
+
+  // Start the game
+  window.addEventListener("DOMContentLoaded", () => {
+      renderAll();
+  });
+</script>
 </body>
 </html>
