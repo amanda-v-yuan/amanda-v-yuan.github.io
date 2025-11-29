@@ -194,12 +194,15 @@ function loadState(){
 
 // --- LOG / POPUP ---
 function pushLog(msg){ const log=document.getElementById("log"); log.innerHTML=msg+"<br>"+log.innerHTML; }
-function showPopup(msg){
+function showPopup(msg, color){
   const p=document.getElementById("popup");
   p.innerHTML=msg;
+  if(color) p.style.background=color; 
+  else p.style.background="var(--card-bg)";
   p.style.display="block";
   setTimeout(()=>{p.style.display="none";},1500);
 }
+
 
 // --- HELPERS ---
 function getIngredient(name){ return INGREDIENTS.find(i=>i.name===name); }
@@ -255,7 +258,7 @@ function openBox(tier){
       box.push(item);
       addIngredient(item);
     }
-    showPopup(`Opened ${tier} box: ${box.join(", ")}`);
+    showPopup(`Opened ${tier} box: ${box.join(", ")}`, tier==="free"?"#1e3c72":tier==="premium"?"#0f850f":"#8a2be2");
     pushLog(`Opened ${tier} box: ${box.join(", ")}`);
   });
 }
