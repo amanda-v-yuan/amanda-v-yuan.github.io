@@ -113,7 +113,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 </div>
 
 <div class="inventory">
-  <h3>Inventory (<span id="inventoryCount">0</span>/<span id="inventoryMax">40</span>)</h3>
+  <h3>Inventory (<span id="inventoryCount">0</span>/<span id="inventoryMax">35</span>)</h3>
   <div class="toggle-group">
     <button id="inventoryAll" class="selected">All</button>
     <button id="inventoryInStock">In Stock Only</button>
@@ -143,7 +143,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 let state = {
   points:0,
   inventory:{},
-  inventoryLimit:30,
+  inventoryLimit:35,
   freeBoxes:3,
   lastFreeBox:Date.now(),
   showCraftableOnly:false,
