@@ -322,35 +322,44 @@ function renderRecipes(){
 
 // --- RENDER TRADING POST ---
 function generateTradeOptions() {
-    const names = Object.keys(state.inventory).filter(n => state.inventory[n] >= 5);
-    const pool = Object.keys(INGREDIENTS);
+    const invNames = Object.keys(state.inventory)
+        .filter(n => state.inventory[n] >= 5 && INGREDIENTS[n]); // ensure ingredient exists
 
-    // Make sure we never duplicate the input ingredient
-    const usedInputs = new Set();
+    const allIngredients = Object.keys(INGREDIENTS); // ALWAYS valid keys
 
     state.tradeOptions = [];
+    const usedInputs = new Set();
 
+    // try to create 3 options, but only if valid ingredients exist
     for (let i = 0; i < 3; i++) {
-        // Pick an input ingredient with at least 5 qty and not used already
-        const available = names.filter(n => !usedInputs.has(n));
-        if (available.length === 0) break;
 
-        const input = available[Math.floor(Math.random() * available.length)];
+        // input ingredient must:
+        // - exist in inventory
+        // - have >= 5 qty
+        // - be valid in INGREDIENTS
+        // - not be used already
+        const availableInputs = invNames.filter(n => !usedInputs.has(n));
+
+        if (availableInputs.length === 0) break;
+
+        const input = availableInputs[Math.floor(Math.random() * availableInputs.length)];
         usedInputs.add(input);
 
-        // Pick a different output ingredient
-        let output;
-        do {
-            output = pool[Math.floor(Math.random() * pool.length)];
-        } while (output === input);
+        // pick an output that isn't the input
+        let outputList = allIngredients.filter(n => n !== input);
+        const output = outputList[Math.floor(Math.random() * outputList.length)];
 
-        state.tradeOptions.push({ input, output, amount: 5 });
-
+        state.tradeOptions.push({
+            input,
+            output,
+            amount: 5
+        });
     }
 
     state.tradeRefreshTime = Date.now();
     saveState();
 }
+
 
 
 function renderTrade(){
@@ -364,10 +373,22 @@ function renderTrade(){
     btn.textContent="Trade";
     btn.disabled=(state.inventory[opt.give]||0)<5;
     btn.onclick = () => {
+    const ingName = opt.input;
+    const target = opt.output;
+
+    if (!INGREDIENTS[ingName] || !INGREDIENTS[target]) {
+        pushLog("Error: invalid trade option — regenerating.");
+        generateTradeOptions();
+        renderTrade();
+        return;
+    }
+
     if (state.inventory[ingName] >= 5) {
         state.inventory[ingName] -= 5;
         state.inventory[target] = (state.inventory[target] || 0) + 1;
+
         pushLog(`Traded 5 ${ingName} → 1 ${target}`);
+
         saveState();
         renderInventory();
         renderTrade();
