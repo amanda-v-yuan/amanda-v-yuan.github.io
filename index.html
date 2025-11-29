@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ingredient Box Game</title>
+<title>Dessert Box Game</title>
 <style>
 :root {
   --bg:#071022;
@@ -264,6 +264,7 @@ function renderInventory(){
   let totalItems = Object.values(state.inventory).reduce((a,b)=>a+b,0);
   document.getElementById("inventoryCount").textContent=totalItems;
   Object.entries(state.inventory)
+    .filter(([name])=> getIngredient(name)) // only known ingredients
     .sort((a,b)=>{
       const rank = {legendary:4, epic:3, rare:2, common:1};
       return rank[getIngredient(b[0]).rarity]-rank[getIngredient(a[0]).rarity];
@@ -285,7 +286,10 @@ function renderRecipes(){
     const canCraft = r.ingredients.every(i=> (state.inventory[i]||0)>0);
     if(state.showCraftableOnly && !canCraft) return;
     const div=document.createElement("div");
-    const ingText = r.ingredients.map(i=> (state.inventory[i]||0)>0 ? i : `<span class="missing">${i}</span>`).join(", ");
+    const ingText = r.ingredients.map(i=> {
+      const ing = getIngredient(i);
+      return ing && (state.inventory[i]||0)>0 ? i : `<span class="missing">${i}</span>`;
+    }).join(", ");
     const count = state.recipeCrafted[r.name]||0;
     let stars="";
     if(count>=1 && count<=2) stars="★";
@@ -399,7 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadState();
     if(!state.inventory) state.inventory={};
     if(!state.recipeCrafted) state.recipeCrafted={};
-    if(!state.tradeOptions) generateTradeOptions();
+    if(!state.tradeOptions || state.tradeOptions.length===0) generateTradeOptions();
 
     document.getElementById("points").textContent = state.points;
     document.getElementById("freeBoxes").textContent = state.freeBoxes;
