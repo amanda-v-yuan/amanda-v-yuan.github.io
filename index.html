@@ -321,18 +321,37 @@ function renderRecipes(){
 }
 
 // --- RENDER TRADING POST ---
-function generateTradeOptions(){
-  const inventoryItems = Object.entries(state.inventory).filter(([n,q])=>q>0).map(([n])=>n);
-  if(inventoryItems.length===0) return;
-  state.tradeOptions=[];
-  for(let i=0;i<3;i++){
-    const give = inventoryItems[Math.floor(Math.random()*inventoryItems.length)];
-    let receiveCandidates = INGREDIENTS.filter(x=>x.name!==give);
-    const receive = receiveCandidates[Math.floor(Math.random()*receiveCandidates.length)].name;
-    state.tradeOptions.push({give:give, receive:receive});
-  }
-  state.tradeRefreshTime=Date.now();
+function generateTradeOptions() {
+    const names = Object.keys(state.inventory).filter(n => state.inventory[n] >= 5);
+    const pool = Object.keys(INGREDIENTS);
+
+    // Make sure we never duplicate the input ingredient
+    const usedInputs = new Set();
+
+    state.tradeOptions = [];
+
+    for (let i = 0; i < 3; i++) {
+        // Pick an input ingredient with at least 5 qty and not used already
+        const available = names.filter(n => !usedInputs.has(n));
+        if (available.length === 0) break;
+
+        const input = available[Math.floor(Math.random() * available.length)];
+        usedInputs.add(input);
+
+        // Pick a different output ingredient
+        let output;
+        do {
+            output = pool[Math.floor(Math.random() * pool.length)];
+        } while (output === input);
+
+        state.tradeOptions.push({ input, output, amount: 5 });
+
+    }
+
+    state.tradeRefreshTime = Date.now();
+    saveState();
 }
+
 
 function renderTrade(){
   const container=document.getElementById("tradeList");
@@ -344,15 +363,17 @@ function renderTrade(){
     const btn=document.createElement("button");
     btn.textContent="Trade";
     btn.disabled=(state.inventory[opt.give]||0)<5;
-    btn.onclick=()=>{
-      if(confirm(`Trade 5 ${opt.give} for 1 ${opt.receive}?`)){
-        state.inventory[opt.give]-=5;
-        addIngredient(opt.receive,1);
-        pushLog(`Traded 5 ${opt.give}, received 1 ${opt.receive}`);
-        showPopup(`Traded 5 ${opt.give}, received 1 ${opt.receive}`);
-        renderInventory(); renderTrade(); saveState();
-      }
-    };
+    btn.onclick = () => {
+    if (state.inventory[ingName] >= 5) {
+        state.inventory[ingName] -= 5;
+        state.inventory[target] = (state.inventory[target] || 0) + 1;
+        pushLog(`Traded 5 ${ingName} → 1 ${target}`);
+        saveState();
+        renderInventory();
+        renderTrade();
+    }
+};
+
     div.appendChild(btn);
     container.appendChild(div);
   });
