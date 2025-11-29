@@ -231,7 +231,6 @@ function openBox(tier){
     for(let i=0;i<count;i++){
       let r=Math.random();
       let candidates=[];
-      // guarantee 1 common
       if(i===0){ candidates=INGREDIENTS.filter(x=>x.rarity=="common"); }
       else if(tier==="free"){
         if(r<0.01) candidates=INGREDIENTS.filter(x=>x.rarity=="legendary");
@@ -243,7 +242,7 @@ function openBox(tier){
         else if(r<0.05) candidates=INGREDIENTS.filter(x=>x.rarity=="epic");
         else if(r<0.2) candidates=INGREDIENTS.filter(x=>x.rarity=="rare");
         else candidates=INGREDIENTS.filter(x=>x.rarity=="common");
-      } else { // ultra
+      } else { 
         if(r<0.05) candidates=INGREDIENTS.filter(x=>x.rarity=="legendary");
         else if(r<0.1) candidates=INGREDIENTS.filter(x=>x.rarity=="epic");
         else if(r<0.25) candidates=INGREDIENTS.filter(x=>x.rarity=="rare");
@@ -328,6 +327,7 @@ function generateTradeOptions(){
 function renderTrade(){
   const container=document.getElementById("tradeList");
   container.innerHTML="";
+  if(!state.tradeOptions) state.tradeOptions=[];
   state.tradeOptions.forEach((opt,idx)=>{
     const div=document.createElement("div");
     div.textContent=`Trade 5 ${opt.give} → 1 ${opt.receive}`;
@@ -395,11 +395,19 @@ setInterval(()=>{
 },1000);
 
 // --- INITIAL LOAD ---
-loadState();
-document.getElementById("points").textContent=state.points;
-document.getElementById("freeBoxes").textContent=state.freeBoxes;
-if(state.tradeOptions.length===0) generateTradeOptions();
-renderInventory(); renderRecipes(); renderTrade();
+document.addEventListener("DOMContentLoaded", () => {
+    loadState();
+    if(!state.inventory) state.inventory={};
+    if(!state.recipeCrafted) state.recipeCrafted={};
+    if(!state.tradeOptions) generateTradeOptions();
+
+    document.getElementById("points").textContent = state.points;
+    document.getElementById("freeBoxes").textContent = state.freeBoxes;
+
+    renderInventory();
+    renderRecipes();
+    renderTrade();
+});
 </script>
 </body>
 </html>
