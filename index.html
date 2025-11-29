@@ -101,7 +101,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 </style>
 </head>
 <body>
-<h1>Ingredient Box Game</h1>
+<h1>Dessert Box Game</h1>
 <div class="stats">
   Points: <span id="points">0</span> | Free Boxes: <span id="freeBoxes">3</span>
 </div>
@@ -113,7 +113,7 @@ button:disabled { opacity:0.4; cursor:not-allowed; }
 </div>
 
 <div class="inventory">
-  <h3>Inventory (<span id="inventoryCount">0</span>/<span id="inventoryMax">30</span>)</h3>
+  <h3>Inventory (<span id="inventoryCount">0</span>/<span id="inventoryMax">40</span>)</h3>
   <div class="toggle-group">
     <button id="inventoryAll" class="selected">All</button>
     <button id="inventoryInStock">In Stock Only</button>
@@ -174,7 +174,9 @@ const RECIPES = [
   {name:"Cake", ingredients:["Flour","Egg","Sugar"], points:15},
   {name:"Cheese Omelette", ingredients:["Egg","Cheese","Milk"], points:25},
   {name:"Chocolate Milk", ingredients:["Milk","Chocolate"], points:35},
-  {name:"Berry Tart", ingredients:["Flour","Butter","Strawberry"], points:35},
+  {name:"Strawberry Tart", ingredients:["Flour","Butter","Strawberry"], points:35},
+  {name:"Berry Jam", ingredients:["Sugar","Blueberry","Strawberry"], points:50},
+  {name:"Ice Cream", ingredients:["Sugar","Milk","Vanilla"], points:40},
   {name:"Honey Chocolate", ingredients:["Chocolate","Honey"], points:60},
   {name:"Vanilla Cake", ingredients:["Flour","Egg","Vanilla"], points:40},
   {name:"Blueberry Pie", ingredients:["Flour","Butter","Blueberry"], points:50},
